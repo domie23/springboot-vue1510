@@ -1,0 +1,288 @@
+<!-- 测试考试查看分数 -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="../../layui/css/layui.css" />
+    <link rel="stylesheet" href="../../css/diy.css" />
+  </head>
+
+  <body>
+    <div class="section1">
+      <!-- 内容主体区域 -->
+      <div class="manu exam" style="padding: 15px">
+        <form class="layui-form" action="" id="form">
+          <div class="layui-form-item" id="ez"></div>
+          <div class="layui-form-item">
+            <div>
+              <label class="layui-form-label">提交人</label>
+              <div class="layui-input-block">
+                <input
+                  type="text"
+                  name="title"
+                  required
+                  lay-verify="required"
+                  autocomplete="off"
+                  class="layui-input"
+                  id="author"
+                  disabled
+                />
+              </div>
+            </div>
+          </div>
+        </form>
+        <div class="buts">
+          <a
+            href="#"
+            target="main_self_frame"
+            class="layui-btn layui-btn-normal"
+            id="submit"
+            >确认/Confirm</a
+          >
+          <a
+            href="./table.html"
+            target="main_self_frame"
+            class="layui-btn layui-btn-normal"
+            >取消/Cancel</a
+          >
+        </div>
+      </div>
+    </div>
+  </body>
+  <script src="../../layui/layui.js"></script>
+  <script src="../../js/axios.min.js"></script>
+  <script src="../../js/base.js" charset="utf-8"></script>
+
+  <script>
+    var BaseUrl = baseUrl();
+    layui.use(["element", "layer", "util"], function () {
+      var element = layui.element,
+        table = layui.table,
+        layer = layui.layer,
+        util = layui.util,
+        form = layui.form,
+        $ = layui.$;
+      let user_answer_id_value = Number(location.search.substring(1));
+      let img;
+      let fenshu = [];
+
+      let form_data = {
+        answers: "",
+        exam_id: 0,
+        nickname: "",
+        objective_score: 0,
+        score: 0,
+        score_detail: "",
+        score_state: 0,
+        subjective_score: 0,
+        user_answer_id: user_answer_id_value,
+        user_id: 0,
+      };
+      let token = localStorage.getItem("token") || null;
+
+      async function fff() {
+        const { data: score } = await axios.get(
+          BaseUrl + "/api/user_answer/get_obj",
+          {
+            params: {
+              user_answer_id: user_answer_id_value,
+            },
+          }
+        );
+        var scrre_data = score.result.obj;
+        form_data.exam_id = scrre_data.exam_id;
+        form_data.user_id = scrre_data.user_id;
+        const { data: rese } = await axios.get(
+          BaseUrl + "/api/exam_question/get_list",
+          {
+            params: {
+              exam_id: form_data.exam_id,
+              orderby: "question_order",
+            },
+          }
+        );
+
+        const { data: resq } = await axios.get(BaseUrl + "/api/user/get_obj", {
+          params: {
+            user_id: form_data.user_id,
+          },
+        });
+        let author = document.querySelector("#author");
+        author.value = resq.result.obj.username+"-"+resq.result.obj.nickname;
+        img = rese.result.list;
+        if (rese) {
+          let jj = JSON.parse(score.result.obj.answers);
+          for (let i = 0; i < img.length; i++) {
+            var ez = document.querySelector("#ez");
+            var li = document.createElement("div");
+            var lii = document.createElement("div");
+            var liii = document.createElement("input");
+            let num=i+1;
+            li.innerHTML =num+"."+img[i].type+"："+img[i].title+"（"+img[i].score +"分）";
+
+            ez.appendChild(li);
+            ez.appendChild(lii);
+            liii.style.contenteditable = "true";
+
+            li.id = "daan";
+            var str = img[i].question_item;
+            var arr = str.split("\n");
+            for (let j = 0; j < arr.length; j++) {
+              var div = document.createElement("div");
+              li.appendChild(div);
+              if (img[i].type == "多选题") {
+                var div = document.createElement("div");
+                li.appendChild(div);
+                var ll = document.createElement("input");
+                ll.type = "checkbox";
+                ll.setAttribute("lay-skin", "primary");
+                ll.setAttribute("lay-filter", "switchSap");
+                ll.value = arr[j];
+                ll.title = arr[j];
+                ll.name = "sex";
+                ll.disabled = true;
+                ll.id = img[i].exam_question_id;
+                for (var t = 0; t < jj[i].answer.length; t++) {
+                  if (ll.title === jj[i].answer[t]) {
+                    ll.checked = true;
+                  }
+                }
+                lii.innerHTML = "参考答案：" + rese.result.list[i].answer;
+                lii.style.color = "red";
+                div.insertBefore(ll, div.childNodes[0]);
+                layui.form.render("checkbox");
+              }
+              if (img[i].type == "判断题" || img[i].type == "单选题") {
+                li.appendChild(div);
+                var ll = document.createElement("input");
+                div.innerHTML = arr[j];
+                ll.type = "radio";
+                ll.value = "";
+                ll.name = arr[j];
+                ll.disabled = true;
+                if (ll.name === jj[i].answer) {
+                  console.log(ll);
+                  ll.checked = true;
+                }
+
+                lii.innerHTML = "参考答案：" + rese.result.list[i].answer;
+                lii.style.color = "red";
+                div.insertBefore(ll, div.childNodes[0]);
+                layui.form.render("radio");
+              }
+            }
+
+            if (img[i].type == "填空题" || img[i].type == "主观题") {
+              let p = img[i].exam_question_id;
+              var input = document.createElement("textarea");
+              li.appendChild(input);
+              input.className = "layui-textarea";
+              input.disabled = true;
+              for (var u = 0; u < jj.length; u++) {
+                if (jj[u].exam_question_id == img[i].exam_question_id) {
+                  input.innerHTML = jj[u].answer;
+                }
+              }
+              ez.appendChild(liii);
+              liii.placeholder = "请输入分数";
+              liii.id = "sbb" + i;
+              liii.className = "layui-input";
+              lii.innerHTML = "参考答案：" + rese.result.list[i].answer;
+              lii.style.color = "red";
+              var jsondata = JSON.parse(scrre_data.score_detail);
+              $("#sbb" + i).blur(function (event) {
+                jsondata.push({
+                  exam_question_id: String(p),
+                  score: Number(event.target.value),
+                });
+                scrre_data.score += Number(event.target.value);
+                scrre_data.subjective_score += Number(event.target.value);
+                checkRepeat(jsondata);
+              });
+              function checkRepeat(arr) {
+                var array = [];
+                arr.forEach((item) => {
+                  if (item) {
+                    array.push(item.exam_question_id);
+                  }
+                });
+                if (new Set(array).size != arr.length) {
+                  let id = new Set(array).size;
+                  let stu = arr[id];
+                  arr.splice(id, 1);
+
+                  function formateArrObjData(initialArr, obj, pro) {
+                    // 判定数据是否为数组
+                    if (!(initialArr instanceof Array)) {
+                      return []; //'请传入正确格式的数组'
+                    }
+                    // 判定数据是否为对象
+                    if (!(obj instanceof Object)) {
+                      return []; //'请传入正确格式的对象'
+                    }
+                    if (!pro) {
+                      return []; //'请传入正确格式的属性名'（用于判断的key值）
+                    }
+
+                    let index = initialArr.findIndex(
+                      (val) => val[pro] === obj[pro]
+                    );
+                    let tempArr = initialArr;
+                    // 如果有就替换  没有就添加
+                    if (
+                      initialArr.findIndex((val) => val[pro] === obj[pro]) !==
+                      -1
+                    ) {
+                      tempArr.splice(index, 1, obj);
+                    } else {
+                      tempArr.push(obj);
+                    }
+                    return tempArr;
+                  }
+
+                  formateArrObjData(arr, stu, "exam_question_id");
+
+                  return true;
+                }
+                return false;
+              }
+
+              form_data.score_detail = JSON.stringify(fenshu);
+            }
+          }
+        }
+        let submit = document.querySelector("#submit");
+        submit.addEventListener("click", async function () {
+          scrre_data.score_detail = JSON.stringify(jsondata);
+          scrre_data.score_state = 1;
+          delete scrre_data.create_time;
+          delete scrre_data.update_time;
+
+          const { data: res } = await axios.post(
+            BaseUrl +
+              "/api/user_answer/set?user_answer_id=" +
+              scrre_data.user_answer_id,
+            scrre_data,
+            {
+              headers: {
+                "x-auth-token": token,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          if (res.result == 1) {
+            layer.msg("确认/Confirm成功");
+            setTimeout(function () {
+              window.location.replace("./table.html");
+            }, 1000);
+          }
+        });
+      }
+
+      fff();
+    });
+  </script>
+</html>

@@ -1,0 +1,415 @@
+<!-- 测试考试查看分数 -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="../../layui/css/layui.css" />
+    <link rel="stylesheet" href="../../css/diy.css" />
+  </head>
+
+  <body>
+    <div class="section1">
+      <!-- 内容主体区域 -->
+      <div class="manu exam" style="padding: 15px">
+        <form class="layui-form" action="" id="form">
+          <div class="layui-form-item" id="ez"></div>
+          <div class="layui-form-item">
+            <div>
+              <label class="layui-form-label">提交人</label>
+              <div class="layui-input-block">
+                <input
+                  type="text"
+                  name="title"
+                  required
+                  lay-verify="required"
+                  autocomplete="off"
+                  class="layui-input"
+                  id="author"
+                  disabled
+                />
+              </div>
+            </div>
+          </div>
+        </form>
+        <div
+          style="
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-size: 24px;
+            color: red;
+          "
+          id="time"
+        ></div>
+        <div class="buts">
+          <a
+            href="#"
+            target="main_self_frame"
+            class="layui-btn layui-btn-normal"
+            id="submit"
+            >确认/Confirm</a
+          >
+          <a
+            href="./table.html"
+            target="main_self_frame"
+            class="layui-btn layui-btn-normal"
+            >取消/Cancel</a
+          >
+        </div>
+      </div>
+    </div>
+  </body>
+  <script src="../../layui/layui.js"></script>
+  <script src="../../js/axios.min.js"></script>
+  <script src="../../js/base.js" charset="utf-8"></script>
+
+  <script>
+    var BaseUrl = baseUrl();
+    layui.use(["element", "layer", "util"], function () {
+      var element = layui.element,
+        table = layui.table,
+        layer = layui.layer,
+        util = layui.util,
+        form = layui.form,
+        $ = layui.$;
+      let value = Number(location.search.substring(1));
+      let img = new Map();
+      let daan = new Map();
+      let fenshu = new Map();
+      let jkk = [];
+      let personInfo = JSON.parse(sessionStorage.personInfo);
+      let use_id = personInfo.user_id;
+      let submit = document.querySelector("#submit");
+
+      let form_data = {
+        answers: "",
+        exam_id: value,
+        nickname: personInfo.nickname,
+        objective_score: 0,
+        score: 0,
+        score_detail: "",
+        score_state: 0,
+        subjective_score: 0,
+        user_answer_id: 0,
+        user_id: use_id,
+      };
+      let token = localStorage.getItem("token") || null;
+
+      async function fff() {
+        const { data: rese } = await axios.get(
+          BaseUrl + "/api/exam_question/get_list",
+          {
+            params: {
+              exam_id: value,
+              orderby: "question_order",
+            },
+          }
+        );
+
+        const { data: resq } = await axios.get(BaseUrl + "/api/user/get_obj", {
+          params: {
+            user_id: use_id,
+          },
+        });
+
+        if (rese) {
+          for (let i = 0; i < rese.result.list.length; i++) {
+            img.set(
+              JSON.stringify(rese.result.list[i].exam_question_id),
+              rese.result.list[i]
+            );
+            if (rese.result.list[i].type == "多选题") {
+              daan.set(JSON.stringify(rese.result.list[i].exam_question_id), {
+                exam_question_id: JSON.stringify(
+                  rese.result.list[i].exam_question_id
+                ),
+                answer: [],
+              });
+            } else {
+              daan.set(JSON.stringify(rese.result.list[i].exam_question_id), {
+                exam_question_id: JSON.stringify(
+                  rese.result.list[i].exam_question_id
+                ),
+                answer: "",
+              });
+            }
+            fenshu.set(JSON.stringify(rese.result.list[i].exam_question_id), 0);
+          }
+          let i = 0;
+          for (let [key, value] of img) {
+            let ez = document.querySelector("#ez");
+            let li = document.createElement("div");
+            let question = value;
+            let num = i + 1;
+            li.innerHTML =
+              num +
+              "." +
+              question.type +
+              "：" +
+              question.title +
+              "（" +
+              question.score +
+              "分）";
+            ez.appendChild(li);
+            let str = question.question_item;
+            let arr = str.split("\n");
+            question.question_arr = arr;
+            for (let j = 0; j < arr.length; j++) {
+              var div = document.createElement("div");
+              li.appendChild(div);
+              if (question.type == "多选题") {
+                var div = document.createElement("div");
+                li.appendChild(div);
+                var ll = document.createElement("input");
+                ll.type = "checkbox";
+                ll.setAttribute("lay-skin", "primary");
+                ll.setAttribute("lay-filter", "switchSap");
+                ll.value = arr[j];
+                ll.title = arr[j];
+                ll.name = question.exam_question_id;
+                ll.id = question.exam_question_id;
+                div.insertBefore(ll, div.childNodes[0]);
+                layui.form.render("checkbox");
+
+                form.on("checkbox(switchSap)", function (data) {
+                  if (data.elem.checked) {
+                    //判断当前多选框是选中还是取消选中
+                    $(this).prop("checked", true);
+                    if (daan.get(data.elem.name)) {
+                      let answer = daan.get(data.elem.name).answer;
+                      answer.push(data.value);
+                      daan.set(data.elem.name, {
+                        exam_question_id: data.elem.name,
+                        answer: answer,
+                      });
+                    } else {
+                      daan.set(data.elem.name, {
+                        exam_question_id: data.elem.name,
+                        answer: [data.value],
+                      });
+                    }
+                    form.render("checkbox"); // 重新渲染复选框
+                  } else {
+                    if (daan.get(data.elem.name)) {
+                      let answer = daan.get(data.elem.name).answer;
+                      for (let m = 0; m < answer.length; m++) {
+                        if (answer[m] == data.value) {
+                          answer.splice(m, 1);
+                          break;
+                        }
+                      }
+                      if (answer.length <= 0) {
+                        daan.set(data.elem.name, {
+                          exam_question_id: data.elem.name,
+                          answer: [],
+                        });
+                      } else {
+                        daan.set(data.elem.name, {
+                          exam_question_id: data.elem.name,
+                          answer: answer,
+                        });
+                      }
+                    }
+                    form.render("checkbox"); // 重新渲染复选框
+                  }
+                  let flag = true;
+                  if (daan.get(data.elem.name)) {
+                    let question_answer_list = img
+                      .get(data.elem.name)
+                      .answer.split("|");
+                    if (
+                      daan.get(data.elem.name).answer.length !==
+                      question_answer_list.length
+                    ) {
+                      flag = false;
+                    } else {
+                      let answers = JSON.stringify(daan.get(data.elem.name));
+                      for (let m = 0; m < question_answer_list.length; m++) {
+                        if (answers.indexOf(question_answer_list[m]) === -1) {
+                          flag = false;
+                          break;
+                        }
+                      }
+                    }
+                  } else {
+                    flag = false;
+                  }
+                  if (flag) {
+                    fenshu.set(
+                      data.elem.name,
+                      parseFloat(img.get(data.elem.name).score)
+                    );
+                  } else {
+                    fenshu.set(data.elem.name, 0);
+                  }
+                });
+              }
+              if (question.type == "判断题" || question.type == "单选题") {
+                li.appendChild(div);
+                var ll = document.createElement("input");
+                ll.setAttribute("lay-filter", "switchSap");
+                div.innerHTML = arr[j];
+                ll.type = "radio";
+                ll.value = arr[j];
+                ll.name = question.exam_question_id;
+                function unique(arr) {
+                  for (var i = 0; i < arr.length; i++) {
+                    for (var j = i + 1; j < arr.length; j++) {
+                      if (arr[i].exam_question_id == arr[j].exam_question_id) {
+                        //第一个等同于第二个，splice方法删除第二个
+                        arr.splice(j, 1);
+                        j--;
+                      }
+                    }
+                  }
+                  return arr;
+                }
+                unique(jkk);
+                form.on("radio(switchSap)", function (data) {
+                  let score = 0;
+                  if (data.elem.checked) {
+                    //判断当前多选框是选中还是取消选中
+                    $(this).prop("checked", true);
+                    daan.set(data.elem.name, {
+                      exam_question_id: data.elem.name,
+                      answer: data.value,
+                    });
+                    if (img.get(data.elem.name).answer == data.value) {
+                      fenshu.set(
+                        data.elem.name,
+                        parseFloat(img.get(data.elem.name).score)
+                      );
+                    } else {
+                      fenshu.set(data.elem.name, 0);
+                    }
+                    form.render("checkbox"); // 重新渲染复选框
+                  } else {
+                    daan.set(data.elem.name, {
+                      exam_question_id: data.elem.name,
+                      answer: "",
+                    });
+                    fenshu.set(data.elem.name, 0);
+                  }
+                });
+                div.insertBefore(ll, div.childNodes[0]);
+                layui.form.render("radio");
+              }
+            }
+            if (question.type == "填空题" || question.type == "主观题") {
+              let p = question.exam_question_id;
+              var input = document.createElement("textarea");
+              li.appendChild(input);
+              input.className = "layui-textarea";
+              input.id = "sb" + key;
+            }
+            i = i + 1;
+          }
+        }
+        submit.addEventListener("click", async function () {
+          let daan_handle = [];
+          let score_handle = [];
+          for (let [key, value] of img) {
+            if (value.type == "填空题" || value.type == "主观题") {
+              daan.set(key, {
+                exam_question_id: key,
+                answer: $("#sb" + key)
+                  .val()
+                  .toString(),
+              });
+            }
+            if (daan.get(key)) {
+              if (value.type == "多选题") {
+                let question = img.get(key).question_item;
+                let question_arr = question.split("\n");
+                let answer_str = JSON.stringify(daan.get(key).answer);
+                let result = [];
+                for (let i = 0; i < question_arr.length; i++) {
+                  if (answer_str.indexOf(question_arr[i]) !== -1) {
+                    result.push(question_arr[i]);
+                  }
+                }
+                daan.get(key).answer = result;
+              }
+              daan_handle.push(daan.get(key));
+              if (fenshu.get(key)) {
+                score_handle.push({
+                  exam_question_id: key,
+                  score: fenshu.get(key),
+                });
+              } else {
+                score_handle.push({ exam_question_id: key, score: 0 });
+              }
+            } else {
+              score_handle.push({ exam_question_id: key, score: 0 });
+            }
+          }
+          // sort by value
+          daan_handle.sort(function (a, b) {
+            return a.exam_question_id - b.exam_question_id;
+          });
+          score_handle.sort(function (a, b) {
+            return a.exam_question_id - b.exam_question_id;
+          });
+          form_data.answers = JSON.stringify(daan_handle);
+          form_data.score_detail = JSON.stringify(score_handle);
+          for (let o = 0; o < score_handle.length; o++) {
+            form_data.objective_score += score_handle[o].score;
+            form_data.score += score_handle[o].score;
+          }
+
+          const { data: res } = await axios.post(
+            BaseUrl + "/api/user_answer/add",
+            form_data,
+            {
+              headers: {
+                "x-auth-token": token,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          if (res.result == 1) {
+            layer.msg("确认/Confirm成功");
+            setTimeout(function () {
+              window.location.replace("./table.html");
+            }, 1000);
+          }
+        });
+
+        let author = document.querySelector("#author");
+        author.value =
+          resq.result.obj.username + "-" + resq.result.obj.nickname;
+      }
+
+      fff();
+      $.ajax({
+        type: "GET",
+        url: BaseUrl + "/api/exam/get_obj?exam_id=" + value,
+        async: false,
+        success: function (res) {
+          var time = 60 * res.result.obj.duration;
+
+          function test() {
+            setInterval(function () {
+              time--;
+              var minutes = Math.floor(time / 60);
+              var seconds = Math.floor(time % 60);
+              document.querySelector("#time").innerHTML =
+                "距离考试倒计时结束还有：" + minutes + "分" + seconds + "秒";
+              if (time == 0) {
+                layer.msg("考试结束");
+                setTimeout(function () {
+                  window.location.replace("./table.html");
+                }, 1000);
+              }
+            }, 1000);
+          }
+
+          test();
+        },
+      });
+    });
+  </script>
+</html>

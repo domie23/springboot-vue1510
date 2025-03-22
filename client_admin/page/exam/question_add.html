@@ -1,0 +1,131 @@
+<!-- 题库新增/Add -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="../../js/axios.min.js"></script>
+  <link rel="stylesheet" href="../../layui/css/layui.css">
+  <link rel="stylesheet" href="../../css/diy.css">
+</head>
+
+<body>
+<article class="sign_in">
+  <div class="warp exam">
+    <div class="layui-container">
+      <div class="layui-row">
+        <form class="layui-form" action="">
+
+          <div class="layui-form-item">
+            <label class="layui-form-label">类型</label>
+            <div class="layui-input-block">
+              <select name="questionType" lay-filter="questionType" id="questionType">
+                <option value=""></option>
+                <option value="1">单选题</option>
+                <option value="2">多选题</option>
+                <option value="3">判断题</option>
+                <option value="4">填空题</option>
+                <option value="5">主观题</option>
+              </select>
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">题目</label>
+            <div class="layui-input-block">
+              <textarea placeholder="输入题目" class="layui-textarea" id="title"></textarea>
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">选项</label>
+            <div class="layui-input-block">
+                <textarea placeholder="输入问题选项.如：
+A:正确
+B:错误" class="layui-textarea" id="question_item"></textarea>
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">参考答案：</label>
+            <div class="layui-input-block">
+              <textarea placeholder="输入参考答案" class="layui-textarea" id="answer"></textarea>
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">分值</label>
+            <div class="layui-input-block">
+              <input type="number" name="num" class="layui-input num" id="score">
+            </div>
+          </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">排序</label>
+            <div class="layui-input-block">
+              <input type="number" name="num" class="layui-input num" id="question_order">
+            </div>
+          </div>
+        </form>
+        <div class="layui-btn-container">
+          <a href="#" type="button" class="layui-btn layui-btn-normal login" id="submit">确认/Confirm</a>
+          <a href="./question_table.html" target="main_self_frame" type="button"
+             class="layui-btn layui-btn-normal login">取消/Cancel</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+</body>
+<script src="../../layui/layui.js" charset="utf-8"></script>
+<script src="../../js/base.js" charset="utf-8"></script>
+
+<script>
+  var BaseUrl = baseUrl()
+  layui.use(['upload', 'element', 'layer'], function () {
+    var $ = layui.jquery
+            , upload = layui.upload
+            , element = layui.element
+            , form = layui.from
+            , layer = layui.layer
+            , $ = layui.$;
+
+    let token = localStorage.getItem('token') || null
+
+
+    let submit = document.querySelector('#submit')
+    let title = document.querySelector('#title')
+    let question_item = document.querySelector('#question_item')
+    let answer = document.querySelector('#answer')
+    let question_order = document.querySelector('#question_order')
+    let score = document.querySelector('#score')
+
+    var exam_question_id = Number(window.location.href.split("?")[1])
+    let from = { exam_question_id: 0 }
+
+    // 单选框点击事件
+    layui.form.on('select(questionType)', function (data) {
+      from['type'] = data.elem[data.elem.selectedIndex].text;
+    })
+
+    submit.addEventListener('click', async function () {
+      from['title'] = title.value
+      from['question_item'] = question_item.value
+      from['answer'] = answer.value
+      from['question_order'] = question_order.value
+      from['score'] = score.value
+      from['exam_id'] = exam_question_id
+      console.log(from);
+      const { data: res } = await axios.post(BaseUrl + '/api/exam_question/add?', from, {
+        headers: {
+          'x-auth-token': token,
+          'Content-Type': 'application/json'
+        }
+      })
+      if (res.result == 1) {
+        layer.msg('确认/Confirm成功');
+        setTimeout(function () { window.location.replace("./question_table.html?"+exam_question_id); }, 1000)
+      }
+    })
+  });
+</script>
+
+</html>
